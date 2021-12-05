@@ -1,0 +1,157 @@
+---
+title: "Advent of Code, Day 5, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+-- Day 5: Hydrothermal Venture ---
+You come across a field of hydrothermal vents on the ocean floor! These vents constantly produce large, opaque clouds, so it would be best to avoid them if possible.
+
+They tend to form in lines; the submarine helpfully produces a list of nearby lines of vents (your puzzle input) for you to review. For example:
+
+0,9 -> 5,9
+8,0 -> 0,8
+9,4 -> 3,4
+2,2 -> 2,1
+7,0 -> 7,4
+6,4 -> 2,0
+0,9 -> 2,9
+3,4 -> 1,4
+0,0 -> 8,8
+5,5 -> 8,2
+Each line of vents is given as a line segment in the format x1,y1 -> x2,y2 where x1,y1 are the coordinates of one end the line segment and x2,y2 are the coordinates of the other end. These line segments include the points at both ends. In other words:
+
+An entry like 1,1 -> 1,3 covers points 1,1, 1,2, and 1,3.
+An entry like 9,7 -> 7,7 covers points 9,7, 8,7, and 7,7.
+For now, only consider horizontal and vertical lines: lines where either x1 = x2 or y1 = y2.
+
+So, the horizontal and vertical lines from the above list would produce the following diagram:
+
+.......1..
+..1....1..
+..1....1..
+.......1..
+.112111211
+..........
+..........
+..........
+..........
+222111....
+In this diagram, the top left corner is 0,0 and the bottom right corner is 9,9. Each position is shown as the number of lines which cover that point or . if no line covers that point. The top-left pair of 1s, for example, comes from 2,2 -> 2,1; the very bottom row is formed by the overlapping lines 0,9 -> 5,9 and 0,9 -> 2,9.
+
+To avoid the most dangerous areas, you need to determine the number of points where at least two lines overlap. In the above example, this is anywhere in the diagram with a 2 or larger - a total of 5 points.
+
+Consider only horizontal and vertical lines. At how many points do at least two lines overlap?
+
+```{r loader, message = FALSE}
+#load
+library(tidyverse)
+
+runtype <- rstudioapi::showPrompt(title = "Type of run", message = "'test' or 'real'?")
+
+day <- "05"
+
+if(runtype == 'test'){
+  filename <- paste0("2021Day", day, "test.txt")
+} else {
+  filename <- paste0("2021Day", day, ".txt")
+}
+
+df <- read_delim(here::here("2021", filename),
+                 delim = "-",
+                 col_names = FALSE, 
+                 trim_ws = TRUE,
+                 col_types = c("c", "c")) %>%
+  separate(col = X2, into = c("X2", "Y2"), remove = TRUE, sep = ",", convert = TRUE) %>%
+  mutate(X2 = as.integer(str_extract(X2, pattern = "[0-9]+"))) %>%
+  separate(col = X1, into = c("X1", "Y1"), remove = TRUE, sep = ",", convert = TRUE) %>%
+  mutate(pairing = paste0("pairing", row_number())) %>%
+  mutate(linetype = case_when(X1 == X2 ~ 'vert', Y1 == Y2 ~ 'hz', TRUE ~ 'sloped'))
+
+df_hz <- df %>% filter(linetype == 'hz')
+listhz <- split(df_hz, df_hz$pairing)
+
+df_vt <- df %>% filter(linetype == 'vert') 
+listvt <- split(df_vt, df_vt$pairing)
+
+df_sl <- df %>% filter(linetype == 'sloped') 
+listsl <- split(df_sl, df_sl$pairing)
+
+rm(filename, day, runtype)
+```
+
+*the key was splitting each point into a list-item, then processing the lists through map. Doing this means we don't have to use index numbers for the fixed point which eliminates the need for an explicit index-based loop.  Expand_grid doesn't work correctly because we don't want ALL combinations of Xs and Ys, just some*
+```{r functions}
+#functions
+make_hz <- function(df){
+  df2 <- data.frame(allX = df$X1:df$X2, allY = df$Y1)
+  return(df2)
+}
+
+make_vt <- function(df){
+  df2 <- data.frame(allY = df$Y1:df$Y2, allX = df$X1)
+  return(df2)
+}
+
+#this one is for part 2
+#dont need to compute slope or intercept because all slopes are 1 and we have endpoints
+make_sl <- function(df){
+  df2 <- data.frame(allX = df$X1:df$X2, allY = df$Y1:df$Y2)
+  return(df2)
+}
+```
+
+```{r part1}
+#part 1 answer
+
+#find all points that are hz or vt
+flats <- bind_rows(map_dfr(listhz, make_hz), map_dfr(listvt, make_vt))
+
+#count how many pairs there are with mutliple instances
+flats %>% count(allX, allY) %>% filter(n > 1) %>% nrow()
+```
+
+That's the right answer! You are one gold star closer to finding the sleigh keys.
+
+## Part 2
+--- Part Two ---
+Unfortunately, considering only horizontal and vertical lines doesn't give you the full picture; you need to also consider diagonal lines.
+
+Because of the limits of the hydrothermal vent mapping system, the lines in your list will only ever be horizontal, vertical, or a diagonal line at exactly 45 degrees. In other words:
+
+An entry like 1,1 -> 3,3 covers points 1,1, 2,2, and 3,3.
+An entry like 9,7 -> 7,9 covers points 9,7, 8,8, and 7,9.
+Considering all lines from the above example would now produce the following diagram:
+
+1.1....11.
+.111...2..
+..2.1.111.
+...1.2.2..
+.112313211
+...1.2....
+..1...1...
+.1.....1..
+1.......1.
+222111....
+You still need to determine the number of points where at least two lines overlap. In the above example, this is still anywhere in the diagram with a 2 or larger - now a total of 12 points.
+
+Consider all of the lines. At how many points do at least two lines overlap?
+
+```{r part2}
+#part 2 answer
+
+#find all points that are hz or vt or sloped
+alltypes <- bind_rows(map_dfr(listhz, make_hz), 
+                      map_dfr(listvt, make_vt),
+                      map_dfr(listsl, make_sl))
+
+
+#count how many pairs there are with mutliple instances
+alltypes %>% count(allX, allY) %>% filter(n > 1) %>% nrow()
+```
+That's the right answer! You are one gold star closer to finding the sleigh keys.
+
+You have completed Day 5!
