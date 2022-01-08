@@ -72,29 +72,32 @@ rm(filename, day, runtype)
 ```
 
 ```{r}
-#do basic arithmetic and add to the number
-#sequencing is really important
-#make the modular reset 7 so we can subtract at the right point
-fish_growth <- function(x){
-  newfish <- sum(str_count(x, pattern = '0'))
-  x[x == 0] <- 7
-  x <- x-1
-  x <- c(x, rep(8, newfish))
-  return(x)
+#can we do this without creating a ridiculous vector?
+dat <- df %>% 
+  data.frame(fish = ., counter = 1) %>% 
+  rbind(data.frame(fish = c(0:8), counter = 0)) %>% 
+  group_by(fish) %>% 
+  summarize(fishcount = sum(counter)) %>%
+  ungroup()
+
+fishgrowthcounter <- function(fishes, cycles){
+  i <- 0
+  while(i < cycles){
+  newfish <- fishes$fishcount[fishes$fish == 0]
+  fishes$fish <- fishes$fish-1 
+  fishes$fishcount[fishes$fish == 6] <- fishes$fishcount[fishes$fish == 6] + newfish
+  fishes$fish[fishes$fish == -1] <- 8
+  fishes <- arrange(fishes, fish)
+  i <- i+1
+  }
+  return(fishes)
 }
 
-dat <- df
-
-#run it a bunch of times. can we avoid a loop?
-i <- 1
-days <- 60
-while(i <= days){
-  dat <- fish_growth(dat)
-  i <- i + 1
-#  print(dat)
-}
-length(dat)
+#part 1 answer
+dat2 <- fishgrowthcounter(dat, 80)
+colSums(dat2)
 ```
+
 
 Your puzzle answer was 352195.
 
@@ -107,93 +110,37 @@ After 256 days in the example above, there would be a total of 26984457539 lante
 
 How many lanternfish would there be after 256 days?
 ```{r}
-#while loop is too slow
+#increase iterations
+#part 2 answer
+dat3 <- fishgrowthcounter(dat, 256)
+options(scipen = 30)
+colSums(dat3)
 ```
 
-starting 6
-starting 5
-starting 4
-starting 3
-starting 2
-starting 1
-starting 0
-(starting 8)
-(starting 7)
 
 ```{r}
-#list of dats, run in chunks?
-#length 80 dat
-
-chunkyfish <- function(x,n){
-  split(x, cut(seq_along(x), n, labels = FALSE))
-}  
-
-schoolsplit <- function(x){
-  n = length(x)
-    return(chunkyfish(x, n))
-}
-
-
-
-dat <- df
-
-#run it a bunch of times. can we avoid a loop?
-i <- 1
-days <- 256
-while(i <= days & length(dat)<1000){
-    dat <- fish_growth(dat)
-    print(i)
-    i <- i + 1  
-  }
-
-datlist <- schoolsplit(dat)
-
-while(i <= 120){
-  datlist <- map(datlist, fish_growth)
-  i <- i+1
-}
-
-
-bigfish <- unlist(datlist)
-datlist <- schoolsplit(bigfish)
-
-#this works but yikes it's slow --- getting wayyyy toooo bigggggg
-#need a mathematical formula or SOMETHING where we count and then multiple etc
-#better to have a single-layer list i think
-while(i <= 150){
-  datlist <- map(datlist, fish_growth)
-  i <- i+1
-}
-i
-
-bigfish <- unlist(datlist)
-datlist <- schoolsplit(bigfish)
-
-while(i <= 200){
-  datlist <- map(datlist, fish_growth)
-  i <- i+1
-}
-
-i
-bigfish <- unlist(datlist)
-#ETC
+# #first method which works but takes a LONG LONG time to run, especially when you get over about 100 reps
+# #don't need this now that we have a count-based solution
+# 
+# #sequencing is really important
+# #make the modular reset 7 so we can subtract at the right point
+# fish_growth <- function(x){
+#   newfish <- sum(str_count(x, pattern = '0'))
+#   x[x == 0] <- 7
+#   x <- x-1
+#   x <- c(x, rep(8, newfish))
+#   return(x)
+# }
+# 
+# dat <- df
+# 
+# #run it a bunch of times. can we avoid a loop?
+# i <- 1
+# days <- 60
+# while(i <= days){
+#   dat <- fish_growth(dat)
+#   i <- i + 1
+# #  print(dat)
+# }
+# length(dat)
 ```
-
-##seems like there must be a more formulaic way to do this
-
-how long til it doubles?
-0: +1 day double
-1: +2 days double
-2: +3 days double
-3: +4 days double
-4: +5 days double
-5: +6 days double
-6: +7 days double
-7: +8 days double
-8: +9 days double
-count of 0 = new fish at 8
-
-```{r}
-
-```
-
