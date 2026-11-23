@@ -188,3 +188,12 @@ sum(str_count(df, "X"))
 ###   in your "to the right" row or column, before you see a block
 ### and the block has to be placed NOT in your future spot, but 1 after it,
 ###  so you still go into your future spot, but then in that location you turn
+
+
+### i think you don't need to track direction at each point, but you do need
+### to know which points are traveled.  And then test what happens if you block
+### each one of them, one at a time.  Do you loop? Or escape?
+### Not sure of the right way to check for looping.  
+### Maybe if the path stabilizes at a particular number of X with no escape. 
+
+# i am certain there is a better way to do this, but here's where i am!
